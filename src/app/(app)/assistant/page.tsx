@@ -1,21 +1,33 @@
-"use client";
+{"use client";
 
 import { useState, useTransition, useRef, useEffect } from "react";
-import { Bot, User, Loader2 } from "lucide-react";
+import { Bot, User, Loader2, FileText, Upload, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { getCsAnswer } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import mammoth from "mammoth";
+import * as pdfjs from "pdfjs-dist";
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
+
+const MAX_FILE_SIZE_MB = 5;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const ALLOWED_FILE_TYPES = [
+  "application/pdf",
+  "text/plain",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
 
 export default function AssistantPage() {
   const [notes, setNotes] = useState("");
@@ -24,6 +36,10 @@ export default function AssistantPage() {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [fileContent, setFileContent] = useState("");
+  const [fileLoading, setFileLoading] = useState(false);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -33,6 +49,75 @@ export default function AssistantPage() {
       });
     }
   }, [conversation]);
+
+  const parseFile = async (file: File) => {
+    setFileLoading(true);
+    try {
+      if (file.type === "application/pdf") {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjs.getDocument(arrayBuffer).promise;
+        let content = "";
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          content += textContent.items.map((item: any) => item.str).join(" ");
+        }
+        return content;
+      } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+        const arrayBuffer = await file.arrayBuffer();
+        const { value } = await mammoth.extractRawText({ arrayBuffer });
+        return value;
+      } else if (file.type === "text/plain") {
+        return file.text();
+      }
+    } catch (error) {
+      console.error("Error parsing file:", error);
+      toast({
+        title: "File Parsing Error",
+        description: "Could not read the content of the file.",
+        variant: "destructive",
+      });
+      return "";
+    } finally {
+      setFileLoading(false);
+    }
+    return "";
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      toast({
+        title: "File too large",
+        description: `Please upload a file smaller than ${MAX_FILE_SIZE_MB}MB.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a PDF, TXT, or DOCX file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadedFile(file);
+    const content = await parseFile(file);
+    setFileContent(content);
+  };
+
+  const removeFile = () => {
+    setUploadedFile(null);
+    setFileContent("");
+    if(fileInputRef.current) {
+        fileInputRef.current.value = "";
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,8 +129,9 @@ export default function AssistantPage() {
 
     startTransition(async () => {
       try {
-        const question = notes
-          ? `Using the following notes: "${notes}", answer the question: "${input}"`
+        const combinedNotes = [notes, fileContent].filter(Boolean).join("\n\n---\n\n");
+        const question = combinedNotes
+          ? `Using the following notes: "${combinedNotes}", answer the question: "${input}"`
           : input;
         
         const result = await getCsAnswer({ question });
@@ -62,7 +148,7 @@ export default function AssistantPage() {
           description: "Failed to get an answer from the assistant. Please try again.",
           variant: "destructive",
         });
-        setConversation((prev) => prev.slice(0, -1)); // Remove the user message on error
+        setConversation((prev) => prev.slice(0, -1));
       }
     });
   };
@@ -71,18 +157,68 @@ export default function AssistantPage() {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-2rem)] p-4">
       <Card className="lg:col-span-1 flex flex-col">
         <CardHeader>
-          <CardTitle className="font-headline">Your Notes</CardTitle>
+          <CardTitle className="font-headline">Your Knowledge Base</CardTitle>
           <CardDescription>
-            Add your notes here to give the AI context for your questions (RAG).
+            Paste notes or upload a document to give the AI context.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col flex-grow">
-          <Textarea
-            placeholder="Paste your Computer Science notes here..."
-            className="flex-grow w-full h-full resize-none"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
+        <CardContent className="flex flex-col flex-grow gap-4">
+          <div className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium">Pasted Notes</h3>
+            <Textarea
+              placeholder="Paste your Computer Science notes here..."
+              className="flex-grow w-full h-48 resize-none"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium">Uploaded Document</h3>
+            {uploadedFile ? (
+              <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                      <FileText className="h-5 w-5 flex-shrink-0" />
+                      <span className="truncate text-sm font-medium">{uploadedFile.name}</span>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={removeFile}>
+                      <X className="h-4 w-4"/>
+                  </Button>
+              </div>
+            ) : (
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={fileLoading}>
+                {fileLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                Upload a document
+              </Button>
+            )}
+             <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={handleFileChange}
+              accept=".pdf,.txt,.docx"
+            />
+          </div>
+           {(fileContent || fileLoading) && (
+              <div className="flex flex-col gap-2 flex-grow">
+                <h3 className="text-sm font-medium">Content Preview</h3>
+                <Card className="flex-grow">
+                    <CardContent className="p-3">
+                         <ScrollArea className="h-32">
+                           {fileLoading ? (
+                             <div className="flex items-center justify-center h-full text-muted-foreground">
+                                <Loader2 className="h-5 w-5 animate-spin mr-2" /> Parsing file...
+                             </div>
+                           ) : (
+                            <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                                {fileContent.substring(0, 500)}
+                                {fileContent.length > 500 && '...'}
+                            </p>
+                           )}
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+              </div>
+            )}
         </CardContent>
       </Card>
 
