@@ -1,4 +1,4 @@
-{"use client";
+"use client";
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import { Bot, User, Loader2, FileText, Upload, X } from "lucide-react";
