@@ -1,3 +1,34 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "user-avatar-1",
+      "description": "User avatar placeholder",
+      "imageUrl": "https://images.unsplash.com/photo-1600180758890-6b94519a8ba6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjU0NTgyNzF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person portrait"
+    },
+    {
+      "id": "feature-qa",
+      "description": "AI Q&A Assistant feature image",
+      "imageUrl": "https://images.unsplash.com/photo-1589254066007-898d52d910d3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxyb2JvdCUyMHRoaW5raW5nfGVufDB8fHx8MTc2NTUzMjUxOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "robot thinking"
+    },
+    {
+      "id": "feature-quiz",
+      "description": "Interactive Quizzes feature image",
+      "imageUrl": "https://images.unsplash.com/photo-1652077859695-de2851a95620?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxxdWVzdGlvbiUyMG1hcmtzfGVufDB8fHx8MTc2NTQyOTIwOXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "question marks"
+    },
+    {
+      "id": "feature-flashcards",
+      "description": "Flashcard Generator feature image",
+      "imageUrl": "https://images.unsplash.com/photo-1623305466248-b0447de035e8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzdGFjayUyMGNhcmRzfGVufDB8fHx8MTc2NTUzMjUxN3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "stack cards"
+    },
+    {
+      "id": "feature-exams",
+      "description": "Mock Exams feature image",
+      "imageUrl": "https://images.unsplash.com/photo-1581080247575-12fa86f6ef6e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHx0ZXN0JTIwcGFwZXJ8ZW58MHx8fHwxNzY1NTMyNTE3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "test paper"
+    }
+  ]
 }
